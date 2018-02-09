@@ -2,6 +2,9 @@ package main
 
 import (
 	"time"
+	"bytes"
+	"encoding/gob"
+	"log"
 )
 
 // Block keeps block headers
@@ -11,6 +14,32 @@ type Block struct {
 	PrevBlockHash []byte
 	Hash          []byte
 	Nonce 		  int
+}
+
+// serialize a block into a byte array
+func (b *Block) Serialize() []byte {
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+
+	err := encoder.Encode(b)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return result.Bytes()
+}
+
+// deserialize a byte array into a Block
+func DeserializeBlock(d []byte) *Block {
+	var block Block
+
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	err := decoder.Decode(&block)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return &block
 }
 
 // NewBlock creates and returns Block
