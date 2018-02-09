@@ -8,10 +8,14 @@ import (
 const dbFile = "blockchain.db"
 const blocksBucket = "blocks"
 
-// Blockchain keeps a sequence of Blocks
 type Blockchain struct {
 	tip []byte
 	db  *bolt.DB
+}
+
+type BlockchainIterator struct {
+	currentHash []byte
+	db          *bolt.DB
 }
 
 // AddBlock saves provided data as a block in the blockchain
@@ -41,6 +45,29 @@ func (bc *Blockchain) AddBlock(data string) {
 		bc.tip = newBlock.Hash
 		return nil
 	})
+}
+
+func (bc *Blockchain) Iterator() *BlockchainIterator {
+	bci := &BlockchainIterator{bc.tip, bc.db}
+	return bci
+}
+
+func (i *BlockchainIterator) Next() *Block {
+	var block *Block
+
+	err := i.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		encodedBlock := b.Get(i.currentHash)
+		block = DeserializeBlock(encodedBlock)
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	i.currentHash = block.PrevBlockHash
+
+	return block
 }
 
 // NewBlockchain creates a new Blockchain with genesis Block
